@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Jeu de Recherche</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        background-color: #f0f0f0;
+      }
+      .container {
+        margin-top: 50px;
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .button {
+        padding: 10px 20px;
+        margin: 20px;
+        cursor: pointer;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+      }
+      .button:hover {
+        background-color: #0056b3;
+      }
+      .player,
+      .object,
+      .result,
+      .timer {
+        font-size: 1.5em;
+        margin: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="player">Joueur actuel: <span id="current-player"></span></div>
+      <div class="object">
+        Objet à trouver: <span id="current-object"></span>
+      </div>
+      <div class="timer">Temps restant: <span id="remaining-time"></span></div>
+      <button class="button" onclick="objectFound()">Objet trouvé</button>
+      <div class="result" id="result"></div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      let remainingTime = 0;
+      let countdownInterval;
+
+      socket.on("stateUpdate", (state) => {
+        document.getElementById("current-player").textContent = state.player;
+        document.getElementById("current-object").textContent = state.object;
+        if (state.allObjectsFound) {
+          document.querySelector(".button").disabled = true;
+        } else {
+          remainingTime = state.remainingTime || 15 * 60; // 15 minutes in seconds
+          startCountdown();
+        }
+      });
+
+      socket.on("gameOver", (data) => {
+        document.getElementById("result").textContent = data.result;
+        clearInterval(countdownInterval);
+      });
+
+      function startCountdown() {
+        clearInterval(countdownInterval);
+        countdownInterval = setInterval(() => {
+          remainingTime--;
+          document.getElementById("remaining-time").textContent =
+            formatTime(remainingTime);
+          if (remainingTime <= 0) {
+            clearInterval(countdownInterval);
+          }
+        }, 1000);
+      }
+
+      function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const sec = seconds % 60;
+        return `${minutes}:${sec < 10 ? "0" : ""}${sec}`;
+      }
+
+      function objectFound() {
+        socket.emit("objectFound");
+      }
+    </script>
+  </body>
+</html>
